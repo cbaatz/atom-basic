@@ -1,13 +1,14 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE RecordWildCards       #-}
 
 module Web.Atom
-    ( toXML
-    , makeFeed
+    ( makeFeed
     , makeEntry
-    , XMLGens (..)
+    , feedXML
+    , entryXML
+    , XMLGen (..)
     , Feed(..)
     , Entry(..)
     , Source(..)
@@ -40,7 +41,7 @@ import           System.Locale          (defaultTimeLocale)
 -- Convenience constructors
 -- ------------------------
 
-makeFeed :: forall e. URI -> Text e -> UTCTime -> Feed e
+makeFeed :: URI -> Text e -> UTCTime -> Feed e
 makeFeed uri title updated = Feed
     { feedId           = uri
     , feedTitle        = title
@@ -57,7 +58,7 @@ makeFeed uri title updated = Feed
     , feedEntries      = []
     }
 
-makeEntry :: forall e. URI -> Text e -> UTCTime -> Entry e
+makeEntry :: URI -> Text e -> UTCTime -> Entry e
 makeEntry uri title updated = Entry
     { entryId           = uri
     , entryTitle        = title
@@ -73,151 +74,23 @@ makeEntry uri title updated = Entry
     , entryLinks        = []
     }
 
--- ----------------
--- XML construction
--- ----------------
+-- -------------------------
+-- External XML construction
+-- -------------------------
 
-class ToXML elem a where
-    toXML :: forall node name content. XMLGens elem node name content -> a -> elem
+feedXML :: XMLGen e node name attr -> Feed e -> e
+feedXML xmlgen feed = toXML xmlgen "feed" feed
 
-instance ToXML e (Feed e) where
-    toXML g f = toXMLElem g "feed" f
+entryXML :: XMLGen e node name attr -> Entry e -> e
+entryXML xmlgen entry = toXML xmlgen "entry" entry
 
-instance ToXML e (Entry e) where
-    toXML g e = toXMLElem g "entry" e
-
-data XMLGens elem node name attr = XMLGens
-    { xmlName :: Maybe T.Text -> T.Text -> name
-    , xmlElem :: name -> [attr] -> [node] -> elem
-    , xmlNode :: elem -> node
-    , xmlText :: T.Text -> node
-    , xmlAttr :: name -> T.Text -> attr
+data XMLGen elem node name attr = XMLGen
+    { xmlElem     :: name -> [attr] -> [node] -> elem
+    , xmlName     :: Maybe T.Text -> T.Text -> name
+    , xmlAttr     :: name -> T.Text -> attr
+    , xmlTextNode :: T.Text -> node
+    , xmlElemNode :: elem -> node
     }
-
-textShow :: (Show a) => a -> T.Text
-textShow = T.pack . show
-
-atomName :: XMLGens e n m a -> T.Text -> m
-atomName g n = (xmlName g (Just "http://www.w3.org/2005/Atom") n)
-
-media :: forall e n m a. XMLGens e n m a -> MediaType -> a
-media g (MediaType m) = (xmlAttr g) (xmlName g Nothing "type") (T.pack $ BC.unpack m)
-
-attr :: XMLGens e n m a -> T.Text -> T.Text -> a
-attr g n v = (xmlAttr g) (xmlName g Nothing n) v
-
-class ToXMLElem e b where
-    toXMLElem :: forall n m a. XMLGens e n m a -> T.Text -> b -> e
-
-instance ToXMLElem e (Feed e) where
-    toXMLElem g _ f = (xmlElem g) (atomName g "feed") [] (map (xmlNode g) (
-        [ toXMLElem g "id"      (feedId f)
-        , toXMLElem g "title"   (feedTitle f)
-        , toXMLElem g "updated" (feedUpdated f)
-        ]
-        ++ catMaybes
-        [ fmap (toXMLElem g "subtitle")  (feedSubtitle f)
-        , fmap (toXMLElem g "icon")      (feedIcon f)
-        , fmap (toXMLElem g "logo")      (feedLogo f)
-        , fmap (toXMLElem g "rights")    (feedRights f)
-        , fmap (toXMLElem g "generator") (feedGenerator f)
-        ]
-        ++ map (\author   -> toXMLElem g "author"   author)   (feedAuthors f)
-        ++ map (\contrib  -> toXMLElem g "contrib"  contrib)  (feedContributors f)
-        ++ map (\category -> toXMLElem g "category" category) (feedCategories f)
-        ++ map (\link     -> toXMLElem g "link"     link)     (feedLinks f)
-        ++ map (\entry    -> toXMLElem g "entry"    entry)    (feedEntries f)
-        ))
-
-instance ToXMLElem e (Source e) where
-    toXMLElem g tag s = (xmlElem g) (atomName g tag) [] (map (xmlNode g) (
-        catMaybes
-        [ fmap (toXMLElem g "id")        (sourceId s)
-        , fmap (toXMLElem g "title")     (sourceTitle s)
-        , fmap (toXMLElem g "updated")   (sourceUpdated s)
-        , fmap (toXMLElem g "subtitle")  (sourceSubtitle s)
-        , fmap (toXMLElem g "icon")      (sourceIcon s)
-        , fmap (toXMLElem g "logo")      (sourceLogo s)
-        , fmap (toXMLElem g "rights")    (sourceRights s)
-        , fmap (toXMLElem g "generator") (sourceGenerator s)
-        ]
-        ++ map (\author   -> toXMLElem g "author"   author)   (sourceAuthors s)
-        ++ map (\contrib  -> toXMLElem g "contrib"  contrib)  (sourceContributors s)
-        ++ map (\category -> toXMLElem g "category" category) (sourceCategories s)
-        ++ map (\link     -> toXMLElem g "link"     link)     (sourceLinks s)
-        ))
-
-instance ToXMLElem e (Entry e) where
-    toXMLElem g _ e = (xmlElem g) (atomName g "entry") [] (map (xmlNode g) (
-        [ toXMLElem g "id"       (entryId      e)
-        , toXMLElem g "title"    (entryTitle   e)
-        , toXMLElem g "updated"  (entryUpdated e)
-        ]
-        ++ catMaybes
-        [ fmap (toXMLElem g "published") (entryPublished e)
-        , fmap (toXMLElem g "summary")   (entrySummary   e)
-        , fmap (toXMLElem g "content")   (entryContent   e)
-        , fmap (toXMLElem g "rights")    (entryRights    e)
-        , fmap (toXMLElem g "source")    (entrySource    e)
-        ]
-        ++ map (\author   -> toXMLElem g "author"   author)   (entryAuthors      e)
-        ++ map (\contrib  -> toXMLElem g "contrib"  contrib)  (entryContributors e)
-        ++ map (\category -> toXMLElem g "category" category) (entryCategories   e)
-        ++ map (\link     -> toXMLElem g "link"     link)     (entryLinks        e)
-        ))
-
-instance ToXMLElem e (Text e) where
-    toXMLElem g tag (TextPlain x) = (xmlElem g) (atomName g tag) [attr g "type" "text"]  [xmlText g x]
-    toXMLElem g tag (TextHTML  x) = (xmlElem g) (atomName g tag) [attr g "type" "html"]  [xmlText g x]
-    toXMLElem g tag (TextXHTML x) = (xmlElem g) (atomName g tag) [attr g "type" "xhtml"] [xmlNode g x]
-
-instance ToXMLElem e (Content e) where
-    toXMLElem g tag (InlinePlainContent t)          = (xmlElem g) (atomName g tag) [attr g "type" "text"] [xmlText g t]
-    toXMLElem g tag (InlineHTMLContent t)           = (xmlElem g) (atomName g tag) [attr g "type" "html"] [xmlText g t]
-    toXMLElem g tag (InlineXHTMLContent xml)        = (xmlElem g) (atomName g tag) [attr g "type" "xhtml"] [xmlNode g xml]
-    toXMLElem g tag (InlineTextContent t mmedia)    = (xmlElem g) (atomName g tag) (catMaybes [fmap (media g) mmedia]) [xmlText g t]
-    toXMLElem g tag (InlineXMLContent xml mmedia)   = (xmlElem g) (atomName g tag) (catMaybes [fmap (media g) mmedia]) [xmlNode g xml]
-    toXMLElem g tag (InlineBase64Content bs mmedia) = (xmlElem g) (atomName g tag) (catMaybes [fmap (media g) mmedia]) [xmlText g (T.decodeUtf8 $ B64.encode bs)]
-    toXMLElem g tag (OutOfLineContent uri mmedia)   = (xmlElem g) (atomName g tag) (catMaybes [fmap (media g) mmedia, Just (attr g "src" (textShow uri))]) []
-
-instance ToXMLElem e Person where
-    toXMLElem g tag (Person name mu me) = (xmlElem g) (atomName g tag) [] (map (xmlNode g) (catMaybes
-                     [                      Just   $ ((xmlElem g) (atomName g "name")  [] [xmlText g name])
-                     , mu >>= \u ->         return $ ((xmlElem g) (atomName g "uri")   [] [xmlText g $ textShow u])
-                     , me >>= \(Email e) -> return $ ((xmlElem g) (atomName g "email") [] [xmlText g e])
-                     ]))
-
-instance ToXMLElem e Category where
-    toXMLElem g tag (Category term mscheme mlabel) = (xmlElem g) (atomName g tag) attrs []
-      where attrs = catMaybes
-                [ Just (attr g "term" term)
-                , fmap (\uri   -> attr g "scheme" (textShow uri)) mscheme
-                , fmap (\label -> attr g "label"  label)          mlabel
-                ]
-
-instance ToXMLElem e Generator where
-    toXMLElem g tag (Generator name muri mversion) = (xmlElem g) (atomName g tag) attrs [xmlText g name]
-      where attrs = catMaybes
-                [ fmap (\uri -> attr g "uri"     (textShow uri)) muri
-                , fmap (\v   -> attr g "version" v)              mversion
-                ]
-
-instance ToXMLElem e Link where
-    toXMLElem g tag (Link href mrel mmedia mlang mtitle mlen) = (xmlElem g) (atomName g tag) attrs []
-      where attrs = catMaybes
-                [ Just (attr g "href" (textShow href))
-                , fmap (\rel                -> attr g "rel" (textShow rel))    mrel
-                , fmap (media g) mmedia
-                , fmap (\(LanguageTag lang) -> attr g "hreflang" lang)         mlang
-                , fmap (\title              -> attr g "title" title)           mtitle
-                , fmap (\len                -> attr g "length" (textShow len)) mlen
-                ]
-
-instance ToXMLElem e URI where
-    toXMLElem g tag uri = (xmlElem g) (atomName g tag) [] [xmlText g (textShow uri)]
-
-instance ToXMLElem e UTCTime where
-    toXMLElem g tag utc = (xmlElem g) (atomName g tag) [] [xmlText g (T.pack $ formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" utc)]
 
 -- ----------
 -- Atom Types
@@ -327,3 +200,155 @@ data Entry e = Entry
     , entryCategories   :: [Category]
     , entryLinks        :: [Link] -- Required if no content element
     } deriving (Show, Eq)
+
+-- -------------------------
+-- Internal helper functions
+-- -------------------------
+
+textShow :: (Show a) => a -> T.Text
+textShow = T.pack . show
+
+atomNS :: Maybe T.Text
+atomNS = Just "http://www.w3.org/2005/Atom"
+
+media :: XMLGen e n m a -> MediaType -> a
+media XMLGen{..} (MediaType m) = xmlAttr (xmlName Nothing "type") (T.decodeUtf8 m)
+
+attr :: XMLGen e n m a -> T.Text -> T.Text -> a
+attr XMLGen{..} name value = xmlAttr (xmlName Nothing name) value
+
+-- -------------------------
+-- Internal XML construction
+-- -------------------------
+
+class ToXML e b where
+    toXML :: XMLGen e n m a -> T.Text -> b -> e
+
+instance ToXML e (Feed e) where
+    toXML g@XMLGen{..} tag Feed{..} = xmlElem (xmlName atomNS tag) [] $
+      map xmlElemNode (
+          [ toXML g "id"      feedId
+          , toXML g "title"   feedTitle
+          , toXML g "updated" feedUpdated
+          ]
+          ++ catMaybes
+          [ fmap (toXML g "subtitle")  feedSubtitle
+          , fmap (toXML g "icon")      feedIcon
+          , fmap (toXML g "logo")      feedLogo
+          , fmap (toXML g "rights")    feedRights
+          , fmap (toXML g "generator") feedGenerator
+          ]
+          ++ map (toXML g "author")      feedAuthors
+          ++ map (toXML g "contributor") feedContributors
+          ++ map (toXML g "category")    feedCategories
+          ++ map (toXML g "link")        feedLinks
+          ++ map (toXML g "entry")       feedEntries
+          )
+
+instance ToXML e (Entry e) where
+    toXML g@XMLGen{..} tag Entry{..} = xmlElem (xmlName atomNS tag) [] $
+      map xmlElemNode (
+          [ toXML g "id"      entryId
+          , toXML g "title"   entryTitle
+          , toXML g "updated" entryUpdated
+          ]
+          ++ catMaybes
+          [ fmap (toXML g "published") entryPublished
+          , fmap (toXML g "summary")   entrySummary
+          , fmap (toXML g "content")   entryContent
+          , fmap (toXML g "rights")    entryRights
+          , fmap (toXML g "source")    entrySource
+          ]
+          ++ map (toXML g "author")      entryAuthors
+          ++ map (toXML g "contributor") entryContributors
+          ++ map (toXML g "category")    entryCategories
+          ++ map (toXML g "link")        entryLinks
+          )
+
+instance ToXML e (Source e) where
+    toXML g@XMLGen{..} tag Source{..} = xmlElem (xmlName atomNS tag) [] $
+      map xmlElemNode (
+          catMaybes
+          [ fmap (toXML g "id")        sourceId
+          , fmap (toXML g "title")     sourceTitle
+          , fmap (toXML g "updated")   sourceUpdated
+          , fmap (toXML g "subtitle")  sourceSubtitle
+          , fmap (toXML g "icon")      sourceIcon
+          , fmap (toXML g "logo")      sourceLogo
+          , fmap (toXML g "rights")    sourceRights
+          , fmap (toXML g "generator") sourceGenerator
+          ]
+          ++ map (toXML g "author")      sourceAuthors
+          ++ map (toXML g "contributor") sourceContributors
+          ++ map (toXML g "category")    sourceCategories
+          ++ map (toXML g "link")        sourceLinks
+          )
+
+instance ToXML e (Text e) where
+    toXML g@XMLGen{..} tag x = case x of
+        TextPlain c -> el [attr g "type" "text"]  [xmlTextNode c]
+        TextHTML  c -> el [attr g "type" "html"]  [xmlTextNode c]
+        TextXHTML c -> el [attr g "type" "xhtml"] [xmlElemNode c]
+      where el = xmlElem (xmlName atomNS tag)
+
+instance ToXML e (Content e) where
+    toXML g@XMLGen{..} tag x = case x of
+        InlinePlainContent t          -> el [attr g "type" "text"]  [xmlTextNode t]
+        InlineHTMLContent t           -> el [attr g "type" "html"]  [xmlTextNode t]
+        InlineXHTMLContent xml        -> el [attr g "type" "xhtml"] [xmlElemNode xml]
+        InlineTextContent t mmedia    -> el (mediaAttrs mmedia)     [xmlTextNode t]
+        InlineXMLContent xml mmedia   -> el (mediaAttrs mmedia)     [xmlElemNode xml]
+        InlineBase64Content bs mmedia -> el (mediaAttrs mmedia)     [xmlTextNode (T.decodeUtf8 $ B64.encode bs)]
+        OutOfLineContent uri mmedia   -> el (mediaAttrs mmedia ++ [attr g "src" $ textShow uri]) []
+      where el = xmlElem (xmlName atomNS tag)
+            mediaAttrs = maybe [] (\m -> [media g m])
+
+instance ToXML e Person where
+    toXML XMLGen{..} tag (Person name mu me) = xmlElem (xmlName atomNS tag) [] $
+      map xmlElemNode (catMaybes
+            [ Just $ el "name" [] [xmlTextNode name]
+            , fmap (\u -> el "uri" [] [xmlTextNode $ textShow u]) mu
+            , fmap (\(Email e) -> el "email" [] [xmlTextNode e])  me
+            ])
+      where el n = xmlElem (xmlName atomNS n)
+
+instance ToXML e Category where
+    toXML g@XMLGen{..} tag (Category term mscheme mlabel) = el attrs []
+      where el = xmlElem (xmlName atomNS tag)
+            attrs = catMaybes
+                [ Just (attr g "term" term)
+                , fmap (attr g "scheme" . textShow) mscheme
+                , fmap (attr g "label") mlabel
+                ]
+
+instance ToXML e Generator where
+    toXML g@XMLGen{..} tag (Generator name muri mversion) = el attrs [xmlTextNode name]
+      where el = xmlElem (xmlName atomNS tag)
+            attrs = catMaybes
+                [ fmap (attr g "uri" . textShow) muri
+                , fmap (attr g "version")        mversion
+                ]
+
+instance ToXML e Link where
+    toXML g@XMLGen{..} tag (Link href mrel mmedia mlang mtitle mlen) = el attrs []
+      where el = xmlElem (xmlName atomNS tag)
+            attrs = catMaybes
+                [ Just . attr g "href" . textShow $ href
+                , fmap (attr g "rel" . textShow)    mrel
+                , fmap (media g)                    mmedia
+                , fmap (\(LanguageTag lang) -> attr g "hreflang" lang) mlang
+                , fmap (attr g "title")             mtitle
+                , fmap (attr g "length" . textShow) mlen
+                ]
+
+instance ToXML e URI where
+    toXML XMLGen{..} tag uri = xmlElem
+        (xmlName atomNS tag)
+        []
+        [xmlTextNode (textShow uri)]
+
+instance ToXML e UTCTime where
+    toXML XMLGen{..} tag utc = xmlElem
+        (xmlName atomNS tag)
+        []
+        [xmlTextNode (T.pack $ formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" utc)]

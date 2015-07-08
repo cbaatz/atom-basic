@@ -1,5 +1,5 @@
 name:                atom-basic
-version:             0.2.0
+version:             0.2.1
 synopsis:            Basic Atom feed construction
 description:
 
@@ -9,6 +9,9 @@ description:
     are provided. You pass values of these types to the 'feedXML' or 'entryXML'
     to generate XML. You provide an 'XMLGen' record of generator functions
     using your preferred XML package.
+    .
+    Please see the documentation of the 'Web.Atom' module for basic usage
+    examples.
 
 license:             BSD3
 license-file:        LICENSE

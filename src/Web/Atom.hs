@@ -30,7 +30,8 @@
 -- >
 -- > main = putStrLn $ showTopElement $ Atom.feedXML xmlgen feed
 --
---  Or you might want to use the <http://hackage.haskell.org/package/xml-conduit xml-conduit> package:
+--  Or you might want to use the
+--  <http://hackage.haskell.org/package/xml-conduit xml-conduit> package:
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- >
@@ -103,7 +104,11 @@ import           System.Locale          (defaultTimeLocale)
 -- Convenience constructors
 -- ------------------------
 
-makeFeed :: URI -> Text e -> UTCTime -> Feed e
+-- | Convenience constructor with defaults for all non-required fields.
+makeFeed :: URI     -- ^ Feed ID
+         -> Text e  -- ^ Feed Title
+         -> UTCTime -- ^ Updated timestamp
+         -> Feed e
 makeFeed uri title updated = Feed
     { feedId           = uri
     , feedTitle        = title
@@ -120,7 +125,11 @@ makeFeed uri title updated = Feed
     , feedEntries      = []
     }
 
-makeEntry :: URI -> Text e -> UTCTime -> Entry e
+-- | Convenience constructor with defaults for all non-required fields.
+makeEntry :: URI    -- ^ Entry ID
+         -> Text e  -- ^ Entry Title
+         -> UTCTime -- ^ Updated timestamp
+         -> Entry e
 makeEntry uri title updated = Entry
     { entryId           = uri
     , entryTitle        = title
@@ -136,6 +145,9 @@ makeEntry uri title updated = Entry
     , entryLinks        = []
     }
 
+-- | Convenience function to create a URIs from hardcoded strings. /This
+-- function is partial so only use this if you're hardcoding the URI string and
+-- you're sure that it's valid./
 unsafeURI :: String -> URI
 unsafeURI = fromJust . parseURI
 
@@ -143,30 +155,57 @@ unsafeURI = fromJust . parseURI
 -- External XML construction
 -- -------------------------
 
+-- | Generate an XML value from a 'Feed'.
 feedXML :: XMLGen e node name attr -> Feed e -> e
 feedXML xmlgen feed = toXML xmlgen "feed" feed
 
+-- | Generate an XML value from an 'Entry'.
 entryXML :: XMLGen e node name attr -> Entry e -> e
 entryXML xmlgen entry = toXML xmlgen "entry" entry
 
-data XMLGen elem node name attr = XMLGen
-    { xmlElem     :: name -> [attr] -> [node] -> elem
+-- | This record defines what kind of XML we should construct. A valid
+-- definition of this record must be provided to the 'feedXML' and 'entryXML'
+-- functions. This lets users use the XML library of their choice for the Atom
+-- feed XML. A couple of concrete examples are provided at the top of this
+-- page. Here's an example that uses the
+-- <http://hackage.haskell.org/package/xml-conduit xml-conduit> package:
+-- 
+-- > xmlgen :: Atom.XMLGen Element Node Name (Name, T.Text)
+-- > xmlgen = Atom.XMLGen
+-- >     { Atom.xmlElem     = \n as ns    -> Element n (fromList as) ns
+-- >     , Atom.xmlName     = \nsMay name -> Name name nsMay Nothing
+-- >     , Atom.xmlAttr     = \k v        -> (k, v)
+-- >     , Atom.xmlTextNode = NodeContent
+-- >     , Atom.xmlElemNode = NodeElement
+-- >     }
+data XMLGen elem node name attr = XMLGen { xmlElem     :: name -> [attr] ->
+[node] -> elem
+    -- ^ Create element from name, attributes, and nodes/contents.
     , xmlName     :: Maybe T.Text -> T.Text -> name
+    -- ^ Create qualified name from optional namespace and name.
     , xmlAttr     :: name -> T.Text -> attr
+    -- ^ Create attribute from qualified name and text value.
     , xmlTextNode :: T.Text -> node
+    -- ^ Create text node/content from text value.
     , xmlElemNode :: elem -> node
+    -- ^ Create element node/content from element.
     }
 
 -- ----------
 -- Atom Types
 -- ----------
 
+-- | Langauge tag as per <https://tools.ietf.org/html/rfc3066>.
 data LanguageTag = LanguageTag T.Text deriving (Show, Eq)
 
+-- | An email address. @xsd:string { pattern = ".+@.+" }@
 data Email = Email T.Text deriving (Show, Eq)
 
+-- | A media type. @xsd:string { pattern = ".+/.+" }@
 data MediaType = MediaType ByteString deriving (Show, Eq)
 
+-- | @rel@ attribute for link elements as per
+-- <https://tools.ietf.org/html/rfc4287#section-4.2.7.2>.
 data Rel = RelText T.Text | RelURI URI deriving (Eq)
 
 instance Show Rel where
@@ -176,6 +215,8 @@ instance Show Rel where
 instance IsString MediaType where
     fromString s = MediaType (BC.pack s)
 
+-- | Human readable text as per
+-- <https://tools.ietf.org/html/rfc4287#section-3.1>.
 data Text e = TextPlain T.Text
             | TextHTML  T.Text
             | TextXHTML e
@@ -184,6 +225,8 @@ data Text e = TextPlain T.Text
 instance IsString (Text e) where
     fromString s = TextPlain (T.pack s)
 
+-- | Content or link to content of an Atom entry as per
+-- <https://tools.ietf.org/html/rfc4287#section-4.1.3>.
 data Content e = InlinePlainContent  T.Text
                | InlineHTMLContent   T.Text
                | InlineXHTMLContent  e
@@ -193,24 +236,32 @@ data Content e = InlinePlainContent  T.Text
                | OutOfLineContent    URI        (Maybe MediaType)
                deriving (Show, Eq)
 
+-- | Describes a person as per
+-- <https://tools.ietf.org/html/rfc4287#section-3.2>.
 data Person = Person
     { personName  :: T.Text
     , personURI   :: Maybe URI
     , personEmail :: Maybe Email
     } deriving (Show, Eq)
 
+-- | Identifies the agent used to generate the feed, for debugging and other
+-- purposes as per <https://tools.ietf.org/html/rfc4287#section-4.2.4>.
 data Generator = Generator
     { generatorName :: T.Text
     , generatorURI  :: Maybe URI
     , version       :: Maybe T.Text
     } deriving (Show, Eq)
 
+-- | Information about a feed or entry category as per
+-- <https://tools.ietf.org/html/rfc4287#section-4.2.2>.
 data Category = Category
     { categoryTerm   :: T.Text
     , categoryScheme :: Maybe URI
     , categoryLabel  :: Maybe T.Text
     } deriving (Show, Eq)
 
+-- | Defines a reference to a web resource as per
+-- <https://tools.ietf.org/html/rfc4287#section-4.2.7>.
 data Link = Link
     { linkHref     :: URI
     , linkRel      :: Maybe Rel
@@ -220,6 +271,8 @@ data Link = Link
     , linkLength   :: Maybe Integer
     } deriving (Show, Eq)
 
+-- | Top-level element for an Atom Feed Document as per
+-- <https://tools.ietf.org/html/rfc4287#section-4.1.1>.
 data Feed e = Feed
     { feedId           :: URI
     , feedTitle        :: Text e
@@ -236,6 +289,9 @@ data Feed e = Feed
     , feedEntries      :: [Entry e]
     } deriving (Show, Eq)
 
+-- | If an Atom entry is copied into a different feed, 'Source' can be used to
+-- preserve the metadata of the original feed as per
+-- <https://tools.ietf.org/html/rfc4287#section-4.2.11>.
 data Source e = Source
     { sourceId           :: Maybe URI
     , sourceTitle        :: Maybe (Text e)
@@ -251,6 +307,9 @@ data Source e = Source
     , sourceLinks        :: [Link]
     } deriving (Show, Eq)
 
+-- | An individual Atom entry that can be used either as a child of 'Feed' or
+-- as the top-level element of a stand-alone Atom Entry Document as per
+-- <https://tools.ietf.org/html/rfc4287#section-4.1.2>.
 data Entry e = Entry
     { entryId           :: URI
     , entryTitle        :: (Text e)
@@ -286,6 +345,8 @@ attr XMLGen{..} name value = xmlAttr (xmlName Nothing name) value
 -- Internal XML construction
 -- -------------------------
 
+-- | Type class for recursively generating the XML value from a Feed or Entry.
+-- This is an internal function used by 'feedXML' and 'entryXML'.
 class ToXML e b where
     toXML :: XMLGen e n m a -> T.Text -> b -> e
 

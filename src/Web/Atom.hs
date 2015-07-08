@@ -23,18 +23,19 @@ module Web.Atom
     , LanguageTag(..)
     , MediaType(..)
     , UTCTime
+    , unsafeURI
     , URI(..)
     ) where
 
 import           Data.ByteString        (ByteString)
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Char8  as BC
-import           Data.Maybe             (catMaybes)
+import           Data.Maybe             (catMaybes, fromJust)
 import           Data.String            (IsString (..))
 import qualified Data.Text              as T
 import qualified Data.Text.Encoding     as T (decodeUtf8)
 import           Data.Time              (UTCTime, formatTime)
-import           Network.URI            (URI (..))
+import           Network.URI            (URI (..), parseURI)
 import           System.Locale          (defaultTimeLocale)
 
 -- ------------------------
@@ -73,6 +74,9 @@ makeEntry uri title updated = Entry
     , entryCategories   = []
     , entryLinks        = []
     }
+
+unsafeURI :: String -> URI
+unsafeURI = fromJust . parseURI
 
 -- -------------------------
 -- External XML construction

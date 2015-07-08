@@ -3,20 +3,28 @@ version:             0.2.0
 synopsis:            Basic Atom feed construction
 description:
 
-    This library provides a type for an Atom feed
-    (http://tools.ietf.org/html/rfc4287) and a way to produce its XML. XML is
-    constructed with the help of a record of construction functions (`XMLGen`)
-    that you provide. This allows you to easily use this with the XML library
-    of your choice.
+    <https://hackage.haskell.org/package/atom-basic atom-basic> aims to provide
+    a type-safe <http://tools.ietf.org/html/rfc4287> Atom feed for the XML
+    package of your choice. Constructors for the 'Feed' and 'Entry' data types
+    are provided. You pass values of these types to the 'feedXML' or 'entryXML'
+    to generate XML. You provide an 'XMLGen' record of generator functions
+    using your preferred XML package.
 
 license:             BSD3
 license-file:        LICENSE
-author:              Carl Baatz
-maintainer:          carl.baatz@gmail.com
+bug-reports:         https://github.com/cbaatz/atom-basic/issues
+maintainer:          Carl Baatz <carl.baatz@gmail.com>
+author:              Carl Baatz <carl.baatz@gmail.com>
 copyright:           (c) 2015 Carl Baatz
 category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
+Extra-source-files:
+    CHANGELOG
+
+source-repository head
+  type:     git
+  location: https://github.com/cbaatz/atom-basic
 
 flag network-uri
    description: Get Network.URI from the network-uri package

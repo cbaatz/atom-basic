@@ -1,3 +1,64 @@
+-- | You use this package by specifying 'XMLGen' generator functions,
+-- constructing a 'Feed', and then using the 'feedXML' function to generate the
+-- XML.
+--
+-- For example, using the <http://hackage.haskell.org/package/xml xml>
+-- package to generate our XML could look like this:
+--
+-- > {-# LANGUAGE OverloadedStrings #-}
+-- >
+-- > import qualified Data.Text      as T
+-- > import           Data.Time      (UTCTime (..), fromGregorian)
+-- > import           Text.XML.Light
+-- > import qualified Web.Atom       as Atom
+-- >
+-- > xmlgen :: Atom.XMLGen Element Content QName Attr
+-- > xmlgen = Atom.XMLGen
+-- >     { Atom.xmlElem     = \n as ns    -> Element n as ns Nothing
+-- >     , Atom.xmlName     = \nsMay name -> QName (T.unpack name)
+-- >                                           (fmap T.unpack nsMay) Nothing
+-- >     , Atom.xmlAttr     = \k v        -> Attr k (T.unpack v)
+-- >     , Atom.xmlTextNode = \t          -> Text $ CData CDataText (T.unpack t) Nothing
+-- >     , Atom.xmlElemNode = Elem
+-- >     }
+-- >
+-- > feed :: Atom.Feed Element
+-- > feed = Atom.makeFeed
+-- >     (Atom.unsafeURI "https://haskell.org/")
+-- >     (Atom.TextHTML "The <em>Title</em>")
+-- >     (UTCTime (fromGregorian 2015 7 8) 0)
+-- >
+-- > main = putStrLn $ showTopElement $ Atom.feedXML xmlgen feed
+--
+--  Or you might want to use the <http://hackage.haskell.org/package/xml-conduit xml-conduit> package:
+--
+-- > {-# LANGUAGE OverloadedStrings #-}
+-- >
+-- > import           Data.Map.Lazy     (fromList)
+-- > import qualified Data.Text         as T
+-- > import qualified Data.Text.Lazy.IO as TL
+-- > import           Data.Time         (UTCTime (..), fromGregorian)
+-- > import           Text.XML
+-- > import qualified Web.Atom          as Atom
+-- >
+-- > xmlgen :: Atom.XMLGen Element Node Name (Name, T.Text)
+-- > xmlgen = Atom.XMLGen
+-- >     { Atom.xmlElem     = \n as ns    -> Element n (fromList as) ns
+-- >     , Atom.xmlName     = \nsMay name -> Name name nsMay Nothing
+-- >     , Atom.xmlAttr     = \k v        -> (k, v)
+-- >     , Atom.xmlTextNode = NodeContent
+-- >     , Atom.xmlElemNode = NodeElement
+-- >     }
+-- >
+-- > feed :: Atom.Feed Element
+-- > feed = Atom.makeFeed
+-- >     (Atom.unsafeURI "https://haskell.org/")
+-- >     (Atom.TextHTML "The <em>Title</em>")
+-- >     (UTCTime (fromGregorian 2015 7 8) 0)
+-- >
+-- > main = TL.putStrLn $ renderText def (Document (Prologue [] Nothing []) xml [])
+-- >   where xml = Atom.feedXML xmlgen feed
+
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}

@@ -1,0 +1,26 @@
+name:                atom-xml-conduit-example
+version:             0.1.0
+synopsis:            Example of generating an Atom feed with <https://hackage.haskell.org/package/xml-conduit xml-conduit>.
+license:             BSD3
+license-file:        LICENSE
+bug-reports:         https://github.com/cbaatz/atom-basic/issues
+maintainer:          Carl Baatz <carl.baatz@gmail.com>
+author:              Carl Baatz <carl.baatz@gmail.com>
+copyright:           (c) 2015 Carl Baatz
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.10
+description:
+
+    This is a minimal example of how to generate an Atom feed using the
+    <https://hackage.haskell.org/package/xml-conduit xml-conduit> package.
+
+executable atom-xml-conduit-example
+  main-is:             Main.hs
+  build-depends:       base
+                     , text
+                     , time
+                     , containers
+                     , xml-conduit
+                     , atom-basic >= 0.2.0
+  default-language:    Haskell2010

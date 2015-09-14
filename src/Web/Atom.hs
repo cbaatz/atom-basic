@@ -1,7 +1,7 @@
 -- | @atom-basic@ lets you generate Atom Feeds and Atom Entries. It provides
 -- the 'Feed' and 'Entry' types for the respective Atom document. This module is
 -- intended to be imported qualified to avoid name clashes:
--- 
+--
 -- > import qualified Web.Atom as Atom
 --
 -- XML generation is not built in because there are several Haskell XML
@@ -14,18 +14,18 @@
 -- A minimal, but complete example using the <http://hackage.haskell.org/package/xml xml> package, looks like this (<https://github.com/cbaatz/atom-basic/blob/master/examples/atom-xml/Main.hs GitHub>):
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
--- > 
+-- >
 -- > import qualified Data.Text      as T
 -- > import           Data.Time      (UTCTime (..), fromGregorian)
 -- > import           Text.XML.Light
 -- > import qualified Web.Atom       as Atom
--- > 
+-- >
 -- > feed :: Atom.Feed Element
 -- > feed = Atom.makeFeed
 -- >     (Atom.unsafeURI "https://haskell.org/")
 -- >     (Atom.TextHTML "The <em>Title</em>")
 -- >     (UTCTime (fromGregorian 2015 7 8) 0)
--- > 
+-- >
 -- > xmlgen :: Atom.XMLGen Element Content QName Attr
 -- > xmlgen = Atom.XMLGen
 -- >     { Atom.xmlElem     = \n as ns    -> Element n as ns Nothing
@@ -35,7 +35,7 @@
 -- >     , Atom.xmlTextNode = \t          -> Text $ CData CDataText (T.unpack t) Nothing
 -- >     , Atom.xmlElemNode = Elem
 -- >     }
--- > 
+-- >
 -- > main = putStr $ ppTopElement $ Atom.feedXML xmlgen feed
 --
 -- Another example that uses the
@@ -80,8 +80,8 @@ import           Data.String            (IsString (..))
 import qualified Data.Text              as T
 import qualified Data.Text.Encoding     as T (decodeUtf8)
 import           Data.Time              (UTCTime, formatTime)
+import           Data.Time.Format       (defaultTimeLocale)
 import           Network.URI            (URI (..), parseURI)
-import           System.Locale          (defaultTimeLocale)
 
 -- ------------------------
 -- Convenience constructors
@@ -152,7 +152,7 @@ entryXML xmlgen entry = toXML xmlgen "entry" entry
 -- feed XML. A couple of concrete examples are provided at the top of this
 -- page. Here's an example that uses the
 -- <http://hackage.haskell.org/package/xml-conduit xml-conduit> package:
--- 
+--
 -- > xmlgen :: Atom.XMLGen Element Node Name (Name, T.Text)
 -- > xmlgen = Atom.XMLGen
 -- >     { Atom.xmlElem     = \n as ns    -> Element n (fromList as) ns

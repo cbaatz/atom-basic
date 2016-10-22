@@ -3,10 +3,11 @@ atom-basic
 
 [`atom-basic`](https://hackage.haskell.org/package/atom-basic) aims to provide
 type-safe [RFC4287](http://tools.ietf.org/html/rfc4287) Atom feed construction
-for the Haskell XML package of your choice.
+using [`text`](https://hackage.haskell.org/package/text) for the Haskell XML
+package of your choice.
 
 The idea is that you construct a `Feed` or `Entry` using the constructors
-provided by the package. You then generate some Haskell XML value from this
+provided by the package and then generate XML of your preferred type from this
 using the `feedXML` or `entryXML` functions.
 
 The type of XML generated is determiend by the `XMLGen` record. This consists

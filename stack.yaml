@@ -1,0 +1,7 @@
+flags:
+  atom-basic:
+    network-uri: true
+packages:
+- '.'
+extra-deps: []
+resolver: lts-7.4

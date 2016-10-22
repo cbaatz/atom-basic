@@ -11,7 +11,7 @@
 -- XML of the type you prefer.
 -- /Thanks to <https:\/\/ocharles.org.uk\/blog\/ Ollie Charles> for this suggestion./
 --
--- A minimal, but complete example using the <http://hackage.haskell.org/package/xml xml> package, looks like this (<https://github.com/cbaatz/atom-basic/blob/master/examples/atom-xml/Main.hs GitHub>):
+-- A minimal example using the <http://hackage.haskell.org/package/xml xml> package looks like this (<https://github.com/cbaatz/atom-basic/blob/master/examples/atom-xml/Main.hs GitHub>):
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- >

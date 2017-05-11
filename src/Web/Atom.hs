@@ -75,7 +75,7 @@ module Web.Atom
 import           Data.ByteString        (ByteString)
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Char8  as BC
-import           Data.Maybe             (catMaybes, fromJust)
+import           Data.Maybe             (catMaybes)
 import           Data.String            (IsString (..))
 import qualified Data.Text              as T
 import qualified Data.Text.Encoding     as T (decodeUtf8)
@@ -132,7 +132,9 @@ makeEntry uri title updated = Entry
 -- function is partial so only use this if you're hardcoding the URI string and
 -- you're sure that it's valid./
 unsafeURI :: String -> URI
-unsafeURI = fromJust . parseURI
+unsafeURI s = case parseURI s of
+    Just uri-> uri
+    Nothing -> error $ "Unable to parse URI string: " ++ s
 
 -- -------------------------
 -- External XML construction

@@ -1,5 +1,5 @@
 name:                atom-basic
-version:             0.2.4
+version:             0.2.5
 synopsis:            Basic Atom feed construction
 description:
 
@@ -19,7 +19,7 @@ category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
 Extra-source-files:
-    CHANGELOG
+    CHANGELOG.md
 
 source-repository head
   type:     git
